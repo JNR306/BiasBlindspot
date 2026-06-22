@@ -29,6 +29,13 @@ playerElement.className = 'cell player';
 playerElement.innerText = '🤖';
 stage.appendChild(playerElement);
 
+let activeMineModifier = 1.0; // 1.0 = Normal, sinkt durch Tool 1
+let activeGemModifier = 1.0;  // 1.0 = Normal, steigt durch Tool 2
+let collectedGemsLocations = new Set(); // Speichert, welche Felder schon leergeräumt wurden
+
+// Kosten für die Tools
+const TOOL_COSTS = { scan: 15, safety: 50, luck: 80 };
+
 // Startfeld als besucht markieren
 visitedFields.add("0,0");
 
@@ -42,14 +49,33 @@ function getMineProbability(x, y) {
     if (!(key in realMines)) {
         const pseudoRandom = Math.abs(Math.sin(x * 12.98 + y * 78.23 + mapSeed)) % 1;
         
-        if (pseudoRandom < 0.55) {
+        if (pseudoRandom < 0.55 * activeMineModifier) {
             let noise = Math.pow(Math.random(), 3); 
-            realMines[key] = 0.05 + noise * 0.95;
+            realMines[key] = (0.05 + noise * 0.95) * activeMineModifier;
         } else {
             realMines[key] = 0.0;
         }
     }
     return realMines[key];
+}
+
+let realGems = {};
+function getGemYield(x, y) {
+    if (Math.abs(x) <= 2 && Math.abs(y) <= 2) return 0;
+    const key = `${x},${y}`;
+    
+    if (!(key in realGems)) {
+        const noise = Math.abs(Math.sin(x * 12.9898 + y * 78.233 + mapSeed * 0.5) * 43758.5453) % 1;
+        
+        const gemChance = 0.08 * activeGemModifier;
+        
+        if (noise < gemChance) {
+            realGems[key] = Math.floor((10 + Math.random() * 90) * activeGemModifier);
+        } else {
+            realGems[key] = 0;
+        }
+    }
+    return realGems[key];
 }
 
 /**
@@ -109,16 +135,27 @@ function isWall(x, y) {
     return realWalls[key];
 }
 
+function updateScoreUI() {
+    document.getElementById('score-val').innerText = gemsCollected;
+}
+
+function checkAndSaveHighscore() {
+    if (gemsCollected > highscore) {
+        highscore = gemsCollected;
+        localStorage.setItem('mineGameHighscore', highscore.toString());
+        document.getElementById('highscore-val').innerText = highscore;
+    }
+}
+
 /**
  * Aktualisiert die Anzeige des Spielfelds im Browser-Fenster.
  */
 function updateViewport() {
-    document.getElementById('score-val').innerText = gemsCollected;
+    updateScoreUI();
     
     const debugElement = document.getElementById('debug-coords');
     if (debugElement) {
         debugElement.innerText = `Koord: (${playerX}, ${playerY})`;
-        if (DEBUG_MODE) debugElement.classList.add('debug-active');
     }
 
     const viewCols = Math.ceil(window.innerWidth / CELL_SIZE) + 6;
@@ -153,6 +190,11 @@ function updateViewport() {
                 continue;
             }
 
+            const gemYield = getGemYield(absX, absY);
+            if (gemYield > 0 && !visitedFields.has(key) && !(absX === playerX && absY === playerY)) {
+                cell.innerText = '💎';
+            }
+
             if (visitedFields.has(key) && !(absX === playerX && absY === playerY)) {
                 cell.classList.add('visited');
                 cell.onclick = null;
@@ -171,10 +213,8 @@ function updateViewport() {
             
             if ((dx <= 1 && dy <= 1) && !(dx === 0 && dy === 0) && !visitedFields.has(key) && !isWall(absX, absY)) {
                 cell.classList.add('clickable');
-                
                 const pseudoRandomDelay = -((Math.abs(Math.sin(absX * 12.98 + absY * 78.23)) * 1.8).toFixed(2));
                 cell.style.setProperty('--pulse-delay', `${pseudoRandomDelay}s`);
-                
                 cell.onclick = () => movePlayer(absX, absY);
             } else {
                 cell.onclick = null;
@@ -185,12 +225,10 @@ function updateViewport() {
 
     playerElement.style.left = `${playerX * CELL_SIZE}px`;
     playerElement.style.top = `${playerY * CELL_SIZE}px`;
-
     const screenCenterX = window.innerWidth / 2 - (CELL_SIZE / 2);
     const screenCenterY = window.innerHeight / 2 - (CELL_SIZE / 2);
     const offsetX = -(playerX * CELL_SIZE) + screenCenterX;
     const offsetY = -(playerY * CELL_SIZE) + screenCenterY;
-    
     stage.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
 }
 
@@ -203,14 +241,17 @@ function movePlayer(targetX, targetY) {
 
     const pMine = getMineProbability(targetX, targetY);
     if (Math.random() < pMine) {
-        if (gemsCollected > highscore) {
-            highscore = gemsCollected;
-            document.getElementById('highscore-val').innerText = highscore;
-        }
         isGameOver = true;
         triggerDeathSequence(targetX, targetY, pMine);
         return;
     } else {
+        const gemYield = getGemYield(targetX, targetY);
+        if (gemYield > 0 && !collectedGemsLocations.has(key)) {
+            collectedGemsLocations.add(key);
+            gemsCollected += gemYield;
+            triggerFloatingText(gemYield);
+        }
+        
         playerX = targetX;
         playerY = targetY;
         gemsCollected++;
@@ -220,6 +261,16 @@ function movePlayer(targetX, targetY) {
 }
 
 window.onload = () => {
+    // Highscore aus dem Browser-Speicher laden
+    const savedHighscore = localStorage.getItem('mineGameHighscore');
+    if (savedHighscore) {
+        highscore = parseInt(savedHighscore, 10);
+        const highscoreDisplay = document.getElementById('highscore-val');
+        if (highscoreDisplay) {
+            highscoreDisplay.innerText = highscore;
+        }
+    }
+
     setTimeout(() => {
         document.getElementById('loader').classList.add('loader-hidden');
     }, 1200);
@@ -232,23 +283,25 @@ window.addEventListener('keydown', (e) => {
 });
 
 async function triggerDeathSequence(targetX, targetY, pMine) {
-    // 1. Shake ausführen (ohne Zoom!)
     triggerBlockWarning(targetX, targetY);
     
-    // 2. Kurz warten für den Schock-Moment
     await new Promise(r => setTimeout(r, 600));
     
-    // 3. UI füllen
     document.getElementById('mine-chance-val').innerText = (pMine * 100).toFixed(0);
     document.getElementById('final-score').innerHTML = `Gems: <strong>${gemsCollected}</strong>`;
     
-    // Highscore-Check
     if (gemsCollected > highscore) {
         document.getElementById('final-score').innerHTML += '<br><span style="color:#ffcc00;">🏆 NEUER HIGHSCORE!</span>';
         highscore = gemsCollected;
+        
+        localStorage.setItem('mineGameHighscore', highscore.toString());
+        
+        const highscoreDisplay = document.getElementById('highscore-val');
+        if (highscoreDisplay) {
+            highscoreDisplay.innerText = highscore;
+        }
     }
     
-    // 4. Overlay zeigen
     document.getElementById('game-over-screen').classList.remove('hidden');
 }
 
@@ -274,6 +327,14 @@ function hideGameOver() {
  */
 function resetGame() {
     gemsCollected = 0;
+    activeMineModifier = 1.0;
+    activeGemModifier = 1.0;
+    
+    upgradeCounts = { safety: 0, luck: 0 };
+    updateButtonPrices(); 
+
+    collectedGemsLocations.clear();
+    realGems = {};
     document.getElementById('score-val').innerText = "0";
 
     mapSeed = Math.random() * 10000;
@@ -350,7 +411,6 @@ function isPathBlocked(tx, ty) {
     return isWall(tx, ty) || visitedFields.has(key);
 }
 
-// Tastatur-Event: Keydown (Registriert Eingaben und berechnet Diagonal-Moves)
 window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
 
@@ -400,7 +460,6 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// Tastatur-Event: Keyup (Führt Einzelschritte aus und löst die Bewegungssperre)
 window.addEventListener('keyup', (e) => {
     const key = e.key.toLowerCase();
     if (!getDirectionFromKey(key)) return;
@@ -490,9 +549,116 @@ function showToast(message) {
     setTimeout(() => toast.classList.add('hidden'), 2000);
 }
 
-// Info Screen Funktionen
+let upgradeCounts = { safety: 0, luck: 0 };
+
+function buyTool(type) {
+    const basePrice = (type === 'safety') ? 50 : 60;
+    const currentPrice = Math.floor(basePrice * Math.pow(1.5, upgradeCounts[type] || 0));
+
+    if (upgradeCounts[type] >= 5) {
+        showToast("Maximale Stufe erreicht!");
+        return;
+    }
+
+    if (gemsCollected < currentPrice) {
+        showToast(`Nicht genug Gems! (${currentPrice} benötigt)`);
+        return;
+    }
+
+    gemsCollected -= currentPrice;
+    upgradeCounts[type]++;
+    updateScoreUI();
+
+    if (type === 'safety') {
+        activeMineModifier *= 0.8;
+        realMines = {};
+        showToast(`Sicherheit Stufe ${upgradeCounts.safety}/5`);
+    } else if (type === 'luck') {
+        activeGemModifier *= 1.2;
+        realGems = {};
+        showToast(`Glück Stufe ${upgradeCounts.luck}/5`);
+    } else if (type === 'scan') {
+        triggerScan();
+        showToast("🔍 Scan durchgeführt.");
+        return; 
+    }
+
+    updateButtonPrices(); 
+    updateDynamicGraphs();
+    updateViewport();
+}
+
+function updateButtonPrices() {
+    const safetyBtn = document.getElementById('safety-btn');
+    const luckBtn = document.getElementById('luck-btn');
+
+    if (safetyBtn) {
+        if (upgradeCounts['safety'] >= 5) {
+            safetyBtn.innerText = `🛡️ Safe-Booster (MAX)`;
+        } else {
+            const nextSafety = Math.floor(50 * Math.pow(1.5, upgradeCounts['safety'] || 0));
+            safetyBtn.innerText = `🛡️ Safe-Booster (${nextSafety}G)`;
+        }
+    }
+
+    if (luckBtn) {
+        if (upgradeCounts['luck'] >= 5) {
+            luckBtn.innerText = `🍀 Glücks-Booster (MAX)`;
+        } else {
+            const nextLuck = Math.floor(60 * Math.pow(1.5, upgradeCounts['luck'] || 0));
+            luckBtn.innerText = `🍀 Glücks-Booster (${nextLuck}G)`;
+        }
+    }
+}
+
 function showInfo() {
     document.getElementById('info-screen').classList.remove('hidden');
+    updateDynamicGraphs();
+}
+
+function updateDynamicGraphs() {
+    // MINEN
+    const mineCurve = document.getElementById('mine-curve');
+    const mineMinLabel = document.getElementById('mine-min-label');
+    const mineMaxLabel = document.getElementById('mine-max-label');
+    
+    const minMinePercent = (5 * activeMineModifier).toFixed(1);
+    const maxMinePercent = (100 * activeMineModifier).toFixed(0);
+    
+    const endX = 20 + (260 * activeMineModifier); 
+    mineCurve.setAttribute('d', `M 20 10 Q 30 78, ${endX} 79`);
+    
+    mineMinLabel.innerText = `${minMinePercent}%`;
+    mineMaxLabel.innerText = `${maxMinePercent}%`;
+
+    // GEMS
+    const gemRect = document.getElementById('gem-rect');
+    const gemMinLabel = document.getElementById('gem-min-label');
+    const gemMaxLabel = document.getElementById('gem-max-label');
+    
+    const minGem = Math.floor(10 * activeGemModifier);
+    const maxGem = Math.floor(99 * activeGemModifier); 
+    
+    const baseWidth = 160;
+    const currentWidth = baseWidth * activeGemModifier;
+    gemRect.setAttribute('width', currentWidth);
+    
+    gemMaxLabel.setAttribute('x', 40 + currentWidth - 15);
+    
+    gemMinLabel.innerText = `${minGem}G`;
+    gemMaxLabel.innerText = `${maxGem}G`;
+}
+
+function triggerFloatingText(amount) {
+    const playerEl = document.querySelector('.player');
+    if (!playerEl) return;
+
+    const popup = document.createElement('div');
+    popup.className = 'floating-gem-text';
+    popup.innerText = `+${amount} 💎`;
+    
+    playerEl.appendChild(popup);
+    setTimeout(() => popup.remove(), 1000);
 }
 
 function hideInfo() {

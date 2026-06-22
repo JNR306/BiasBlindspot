@@ -18,10 +18,9 @@
     <div id="grid-stage"></div>
 
     <div id="ui-bottom-bar" class="glass-ui">
-        <button id="scan-btn" class="tool-btn">
-            <span class="btn-icon">🔍</span>
-            <span class="btn-cost">Scan (10 Gems)</span>
-        </button>
+        <button id="scan-btn" class="tool-btn" onclick="buyTool('scan')">🔍 Scan (10G)</button>
+        <button id="safety-btn" class="tool-btn" onclick="buyTool('safety')">🛡️ Safe-Booster (50G)</button>
+        <button id="luck-btn" class="tool-btn" onclick="buyTool('luck')">🍀 Glücks-Booster (60G)</button>
     </div>
 
     <div id="loader">
@@ -39,30 +38,28 @@
     </div>
 
     <div id="info-screen" class="hidden">
-        <div class="modal-content glass-ui" style="flex-direction: column; width: 400px;">
-            <h2>Minen-Wahrscheinlichkeitsdichte</h2>
+        <div class="modal-content glass-ui" style="flex-direction: column; width: 450px; max-height: 85vh; overflow-y: auto;">
+            <h2 style="margin-top: 0;">Wahrscheinlichkeitsverteilung</h2>
             
-            <svg viewBox="0 0 300 150" style="width: 100%; max-width: 500px; height: auto;">
-                <line x1="20" y1="120" x2="280" y2="120" stroke="#555" stroke-width="2"/>
-                <line x1="20" y1="20" x2="20" y2="120" stroke="#555" stroke-width="2"/>
-                
-                <text x="15" y="135" fill="#888" font-size="10">0%</text>
-                <text x="260" y="135" fill="#888" font-size="10">100%</text>
-                
-                <rect x="25" y="20" width="10" height="100" fill="#ff4b4b" />
-                <text x="20" y="15" fill="#ff4b4b" font-size="10" font-weight="bold">Massive Häufung bei 0%</text>
-
-                <path d="M 35 120 Q 40 115, 100 100 T 260 115" 
-                    stroke="#00ffcc" stroke-width="3" fill="none" />
-                    
-                <text x="100" y="80" fill="#00ffcc" font-size="10">55% Gruppe (kubisch verteilt)</text>
+            <h3 style="color: #ff4b4b; font-size: 0.9rem; margin: 5px 0;">💣 MINEN-RISIKO</h3>
+            <svg viewBox="0 0 300 100" style="width: 100%; height: 100px;">
+                <line x1="20" y1="80" x2="280" y2="80" stroke="#555" stroke-width="2"/>
+                <line x1="20" y1="10" x2="20" y2="80" stroke="#555" stroke-width="2"/>
+                <path id="mine-curve" d="M 20 10 Q 30 78, 280 79" stroke="#ff4b4b" stroke-width="3" fill="none" />
+                <text x="22" y="95" fill="#888" font-size="9" id="mine-min-label">5%</text>
+                <text x="260" y="95" fill="#888" font-size="9" id="mine-max-label">100%</text>
             </svg>
 
-            <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 20px;">
-                Die Kurve zeigt, wie wahrscheinlich ein Feld mit einer bestimmten Minen-Chance generiert wird.
-            </p>
-            
-            <button class="tool-btn" onclick="hideInfo()">Schließen</button>
+            <h3 style="color: #00ffcc; font-size: 0.9rem; margin: 15px 0 5px 0;">💎 GEM-ERTRAG (Gleichverteilung)</h3>
+            <svg viewBox="0 0 300 100" style="width: 100%; height: 100px;">
+                <line x1="20" y1="80" x2="350" y2="80" stroke="#555" stroke-width="2"/>
+                <line x1="20" y1="10" x2="20" y2="80" stroke="#555" stroke-width="2"/>
+                <rect id="gem-rect" x="40" y="40" width="160" height="40" fill="rgba(0, 255, 204, 0.3)" stroke="#00ffcc" stroke-width="2"/>
+                <text x="35" y="95" fill="#888" font-size="9" id="gem-min-label">10G</text>
+                <text x="180" y="95" fill="#888" font-size="9" id="gem-max-label">99G</text>
+            </svg>
+
+            <button class="tool-btn" style="margin-top: 20px; width: 100%;" onclick="hideInfo()">Schließen</button>
         </div>
     </div>
 

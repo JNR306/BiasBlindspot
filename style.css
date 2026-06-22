@@ -161,7 +161,6 @@ body {
     z-index: 9999;
 }
 
-/* Info Screen Fade Animation */
 #info-screen {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
@@ -328,4 +327,43 @@ body {
     width: 90%;
     max-width: 400px;
     text-align: center;
+}
+
+.cell.gem-field {
+    background-color: rgba(0, 255, 204, 0.05) !important;
+    border-color: rgba(0, 255, 204, 0.2) !important;
+    font-size: 1.2rem;
+}
+
+.floating-gem-text {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #00ffcc;
+    font-weight: 800;
+    font-size: 1.1rem;
+    text-shadow: 0 0 8px #000;
+    pointer-events: none;
+    animation: floatUpAndFade 1s ease-out forwards;
+    z-index: 99999;
+}
+
+@keyframes floatUpAndFade {
+    0% { transform: translate(-50%, 0); opacity: 1; scale: 0.8; }
+    20% { scale: 1.2; }
+    100% { transform: translate(-50%, -40px); opacity: 0; scale: 1; }
+}
+
+.tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+#final-score {
+    text-align: center;
+    display: block;
+    width: 100%;
 }
