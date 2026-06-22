@@ -2,7 +2,7 @@
 
 Ein unendlicher Crawler, bei dem jeder Schritt mathematisches Risiko bedeutet. Nutze Scanner und Booster, um in einer prozedural generierten Welt voller Gefahren Edelsteine zu sammeln und deinen Highscore zu knacken.
 
-Das Spiel ist direkt über GitHub Pages spielbar. Einfach das Repository auf GitHub hochladen, Pages in den Settings aktivieren und im Browser starten!
+Das Spiel ist direkt über GitHub Pages spielbar. Einfach folgenden Link öffnen: https://jnr306.github.io/BiasBlindspot/
 
 ---
 
