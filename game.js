@@ -17,6 +17,9 @@ let isControlLocked = false;
 let queuedDx = 0;
 let queuedDy = 0;
 
+let isGameOver = false;
+let highscore = 0;
+
 const stage = document.getElementById('grid-stage');
 const scanBtn = document.getElementById('scan-btn');
 
@@ -200,9 +203,13 @@ function movePlayer(targetX, targetY) {
 
     const pMine = getMineProbability(targetX, targetY);
     if (Math.random() < pMine) {
-        alert(`BOOM! Eine Mine hat dich erwischt!\nGems gesammelt: ${gemsCollected}`);
-        gemsCollected = 0; 
-        resetGame(); 
+        if (gemsCollected > highscore) {
+            highscore = gemsCollected;
+            document.getElementById('highscore-val').innerText = highscore;
+        }
+        isGameOver = true;
+        triggerDeathSequence(targetX, targetY, pMine);
+        return;
     } else {
         playerX = targetX;
         playerY = targetY;
@@ -212,10 +219,63 @@ function movePlayer(targetX, targetY) {
     }
 }
 
+window.onload = () => {
+    setTimeout(() => {
+        document.getElementById('loader').classList.add('loader-hidden');
+    }, 1200);
+};
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && isGameOver) {
+        hideGameOver();
+    }
+});
+
+async function triggerDeathSequence(targetX, targetY, pMine) {
+    // 1. Shake ausführen (ohne Zoom!)
+    triggerBlockWarning(targetX, targetY);
+    
+    // 2. Kurz warten für den Schock-Moment
+    await new Promise(r => setTimeout(r, 600));
+    
+    // 3. UI füllen
+    document.getElementById('mine-chance-val').innerText = (pMine * 100).toFixed(0);
+    document.getElementById('final-score').innerHTML = `Gems: <strong>${gemsCollected}</strong>`;
+    
+    // Highscore-Check
+    if (gemsCollected > highscore) {
+        document.getElementById('final-score').innerHTML += '<br><span style="color:#ffcc00;">🏆 NEUER HIGHSCORE!</span>';
+        highscore = gemsCollected;
+    }
+    
+    // 4. Overlay zeigen
+    document.getElementById('game-over-screen').classList.remove('hidden');
+}
+
+function hideGameOver() {
+    const stage = document.getElementById('grid-stage');
+    
+    stage.classList.remove('death-mode');
+    stage.style.transform = ""; 
+    
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('loader').classList.remove('loader-hidden');
+    
+    resetGame();
+    isGameOver = false;
+    
+    setTimeout(() => {
+        document.getElementById('loader').classList.add('loader-hidden');
+    }, 1000);
+}
+
 /**
  * Setzt das Spiel komplett zurück, inklusive Generierung eines neuen Map-Seeds.
  */
 function resetGame() {
+    gemsCollected = 0;
+    document.getElementById('score-val').innerText = "0";
+
     mapSeed = Math.random() * 10000;
 
     Object.values(renderedCells).forEach(cell => {
@@ -224,11 +284,11 @@ function resetGame() {
         }
     });
 
-    realWalls = {};       
-    realMines = {};       
+    realWalls = {};
+    realMines = {};
     scanDeaths = {};
-    renderedCells = {};   
-    visitedFields.clear(); 
+    renderedCells = {};
+    visitedFields.clear();
 
     playerX = 0;
     playerY = 0;
@@ -293,8 +353,15 @@ function isPathBlocked(tx, ty) {
 // Tastatur-Event: Keydown (Registriert Eingaben und berechnet Diagonal-Moves)
 window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
+
+    if (isGameOver) {
+        if (key === 'enter') {
+            hideGameOver();
+        }
+        return;
+    }
+
     const dir = getDirectionFromKey(key);
-    
     if (!dir) return;
     e.preventDefault();
 
@@ -340,6 +407,7 @@ window.addEventListener('keyup', (e) => {
 
     activeKeys.delete(key);
 
+    if (isGameOver) return;
     if (!isControlLocked && activeKeys.size === 0) {
         if (queuedDx !== 0 || queuedDy !== 0) {
             let targetX = playerX + queuedDx;
@@ -366,7 +434,7 @@ window.addEventListener('keyup', (e) => {
  */
 scanBtn.onclick = function triggerScan() {
     if (gemsCollected < 10) {
-        alert("Nicht genug Gems! Ein Scan kostet 10 Gems.");
+        showToast("Zu wenig Gems! (10 nötig)");
         return;
     }
 
@@ -414,3 +482,19 @@ document.addEventListener('touchmove', (e) => {
         e.preventDefault();
     }
 }, { passive: false });
+
+function showToast(message) {
+    const toast = document.getElementById('toast-message');
+    toast.innerText = message;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 2000);
+}
+
+// Info Screen Funktionen
+function showInfo() {
+    document.getElementById('info-screen').classList.remove('hidden');
+}
+
+function hideInfo() {
+    document.getElementById('info-screen').classList.add('hidden');
+}
