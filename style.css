@@ -11,6 +11,7 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    touch-action: none;
 }
 
 #grid-stage {
@@ -43,11 +44,23 @@ body {
     cursor: pointer;
 }
 
-/* Visuelles Highlight für alle begehbaren Kacheln auf Mobilgeräten */
+.cell.clickable:hover {
+    background-color: #2a2a2a;
+    cursor: pointer;
+}
+
+/* Pulsierende Hintergrundfarbe für begehbare Felder auf Mobilgeräten */
 .cell.clickable {
-    box-shadow: 0 0 8px rgba(0, 255, 204, 0.2);
-    border: 1px solid rgba(0, 255, 204, 0.3) !important;
-    animation: mobilePulse 2s infinite alternate ease-in-out;
+    animation: cellPulse 1.8s infinite alternate ease-in-out;
+}
+
+@keyframes cellPulse {
+    from {
+        background-color: #1a1a1a;
+    }
+    to {
+        background-color: #0f3d35a0;
+    }
 }
 
 @keyframes mobilePulse {
@@ -83,45 +96,86 @@ body {
     font-size: 1.2rem;
 }
 
-#ui-layer {
+#ui-top-capsule {
     position: absolute;
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
     background: rgba(18, 18, 18, 0.85);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 15px 30px;
-    border-radius: 12px;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 24px;
+    border-radius: 30px; /* Kapselförmig */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
     pointer-events: auto;
 }
 
-#scoreboard {
-    font-size: 1.6rem;
+#gem-counter {
+    font-size: 1.3rem;
     font-weight: bold;
     color: #00ffcc;
-    margin-bottom: 10px;
+    letter-spacing: 0.5px;
 }
 
-button {
-    background-color: #00ffcc;
-    color: #121212;
-    border: none;
-    padding: 12px 24px;
-    font-size: 1rem;
-    font-weight: bold;
-    border-radius: 6px;
+#ui-bottom-bar {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    background: rgba(18, 18, 18, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px;
+    border-radius: 20px;
+    display: flex;
+    gap: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    pointer-events: auto;
+}
+
+.tool-btn {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border: 1px solid #333;
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 12px;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0, 255, 204, 0.3);
-    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
 }
 
-button:hover {
-    background-color: #00cc99;
-    transform: translateY(-1px);
+.tool-btn:not(:disabled):hover {
+    background-color: #252525;
+    border-color: #00ffcc;
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.2);
+}
+
+#scan-btn {
+    border-color: rgba(0, 255, 204, 0.4);
+}
+
+.btn-icon {
+    font-size: 1.3rem;
+}
+
+.btn-cost {
+    font-size: 0.75rem;
+    color: #00ffcc;
+    font-weight: normal;
+}
+
+.tool-btn.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-style: dashed;
 }
 
 .hint {

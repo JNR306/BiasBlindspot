@@ -7,15 +7,28 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="ui-layer">
-        <div id="scoreboard">Schritte: <span id="score-val">0</span></div>
+    <div id="ui-top-capsule">
+        <div id="gem-counter">💎 <span id="score-val">0</span> Gems</div>
         <div id="debug-coords" class="debug-info"></div>
-        <button id="scan-btn">Umgebung Scannen</button>
-        <p class="hint">Nutze Pfeiltasten/WASD oder Klicks zum Bewegen.</p>
+    </div>
+
+    <div id="ui-bottom-bar">
+        <button id="scan-btn" class="tool-btn">
+            <span class="btn-icon">📡</span>
+            <span class="btn-text">Scan Umgebung</span>
+            <span class="btn-cost">(10 💎)</span>
+        </button>
+        <button class="tool-btn locked" disabled>
+            <span class="btn-icon">🔒</span>
+            <span class="btn-text">Slot leer</span>
+        </button>
+        <button class="tool-btn locked" disabled>
+            <span class="btn-icon">🔒</span>
+            <span class="btn-text">Slot leer</span>
+        </button>
     </div>
 
     <div id="grid-stage"></div>
-
     <script src="game.js"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@ const DEBUG_MODE = false;
 
 let playerX = 0;
 let playerY = 0;
-let stepsTaken = 0;
+let gemsCollected = 0;
 
 const realMines = {};
 let scanDeaths = {};
@@ -43,7 +43,7 @@ function getMineProbability(x, y) {
  * Updates Viewport DOM and handles lag-damping translation vector
  */
 function updateViewport() {
-    document.getElementById('score-val').innerText = stepsTaken;
+    document.getElementById('score-val').innerText = gemsCollected;
     
     const debugElement = document.getElementById('debug-coords');
     debugElement.innerText = `Koord: (${playerX}, ${playerY})`;
@@ -116,12 +116,12 @@ function movePlayer(targetX, targetY) {
 
     const pMine = getMineProbability(targetX, targetY);
     if (Math.random() < pMine) {
-        alert(`BOOM! Eine Mine hat dich erwischt!\nScore: ${stepsTaken}`);
+        alert(`BOOM! Eine Mine hat dich erwischt!\nGems gesammelt: ${gemsCollected}`);
         resetGame();
     } else {
         playerX = targetX;
         playerY = targetY;
-        stepsTaken++;
+        gemsCollected++; // 1 Schritt = 1 Gem
         visitedFields.add(key);
     }
     updateViewport();
@@ -130,7 +130,7 @@ function movePlayer(targetX, targetY) {
 function resetGame() {
     playerX = 0;
     playerY = 0;
-    stepsTaken = 0;
+    gemsCollected = 0;
     scanDeaths = {};
     visitedFields.clear();
     visitedFields.add("0,0");
@@ -184,6 +184,14 @@ window.addEventListener('keyup', (e) => {
  * Monte Carlo Path Simulation Engine
  */
 scanBtn.onclick = function triggerScan() {
+    // Check auf ausreichende Balance
+    if (gemsCollected < 10) {
+        alert("Nicht genug Gems! Ein Scan kostet 10 Gems.");
+        return;
+    }
+
+    // Kosten abziehen
+    gemsCollected -= 10;
     scanDeaths = {}; 
     const TOTAL_PATHS = 150; 
     
@@ -211,3 +219,12 @@ scanBtn.onclick = function triggerScan() {
 
 window.addEventListener('resize', updateViewport);
 updateViewport();
+
+/**
+ * Prevents mobile safari elastic overscroll bouncing
+ */
+document.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1) {
+        e.preventDefault();
+    }
+}, { passive: false });
