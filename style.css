@@ -1,0 +1,124 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #121212;
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+#grid-stage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    transition: transform 2.5s cubic-bezier(0.1, 0.9, 0.1, 1);
+    will-change: transform;
+}
+
+.cell {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    background-color: #1a1a1a;
+    border: 1px solid #222;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.85rem;
+    user-select: none;
+    transition: background-color 0.4s ease;
+}
+
+.cell.clickable:hover {
+    background-color: #2a2a2a;
+    cursor: pointer;
+}
+
+.player {
+    background-color: #007bff !important;
+    box-shadow: 0 0 20px #00d2ff, inset 0 0 10px #00d2ff;
+    font-size: 1.4rem;
+    z-index: 10;
+    transition: left 0.15s cubic-bezier(0.25, 1, 0.5, 1), 
+                top 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.visited {
+    background-color: #0f1c2e !important;
+    border: 1px solid #0055ff33 !important;
+    cursor: not-allowed !important;
+}
+
+.visited::after {
+    content: "•";
+    color: #007bff;
+    opacity: 0.5;
+    font-size: 1.2rem;
+}
+
+#ui-layer {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    background: rgba(18, 18, 18, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 15px 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    pointer-events: auto;
+}
+
+#scoreboard {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #00ffcc;
+    margin-bottom: 10px;
+}
+
+button {
+    background-color: #00ffcc;
+    color: #121212;
+    border: none;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 255, 204, 0.3);
+    transition: background 0.2s, transform 0.1s;
+}
+
+button:hover {
+    background-color: #00cc99;
+    transform: translateY(-1px);
+}
+
+.hint {
+    color: #aaa;
+    font-size: 0.8rem;
+    margin: 8px 0 0 0;
+}
+
+.debug-info {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+    display: none;
+}
+
+.debug-active {
+    display: block !important;
+}
