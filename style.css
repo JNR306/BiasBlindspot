@@ -43,6 +43,24 @@ body {
     cursor: pointer;
 }
 
+/* Visuelles Highlight für alle begehbaren Kacheln auf Mobilgeräten */
+.cell.clickable {
+    box-shadow: 0 0 8px rgba(0, 255, 204, 0.2);
+    border: 1px solid rgba(0, 255, 204, 0.3) !important;
+    animation: mobilePulse 2s infinite alternate ease-in-out;
+}
+
+@keyframes mobilePulse {
+    from {
+        border-color: rgba(0, 255, 204, 0.2);
+        box-shadow: 0 0 6px rgba(0, 255, 204, 0.15);
+    }
+    to {
+        border-color: rgba(0, 255, 204, 0.5);
+        box-shadow: 0 0 12px rgba(0, 255, 204, 0.35);
+    }
+}
+
 .player {
     background-color: #007bff !important;
     box-shadow: 0 0 20px #00d2ff, inset 0 0 10px #00d2ff;
