@@ -1,5 +1,24 @@
 const CELL_SIZE = 60; 
-const DEBUG_MODE = false; 
+const DEBUG_MODE = false;
+
+// ── Tutorial-Flags ───────────────────────────────────────────────────────────
+// FORCE_TUTORIAL: true = Tutorial immer zeigen (überschreibt localStorage).
+//                 false = nur beim ersten Besuch.
+const FORCE_TUTORIAL = true;
+
+// Einzelne Tutorial-Schritte ein-/ausblenden (true = sichtbar, false = überspringen):
+const TUTORIAL_SHOW = {
+    welcome:       true,   // Schritt 1: Willkommen
+    world:         true,   // Schritt 2: Die Welt
+    controls:      true,   // Schritt 3: Steuerung
+    gems:          true,   // Schritt 4: Gems & Highscore
+    scanner:       true,   // Schritt 5: Scanner
+    safeBooster:   true,   // Schritt 6: Safe-Booster
+    luckBooster:   true,   // Schritt 7: Glücks-Booster
+    charts:        false,   // Schritt 8: Wahrscheinlichkeits-Diagramme
+    tip:           true,   // Schritt 9: Letzter Tipp
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 let playerX = 0;
 let playerY = 0;
@@ -66,11 +85,11 @@ function getGemYield(x, y) {
     
     if (!(key in realGems)) {
         const noise = Math.abs(Math.sin(x * 12.9898 + y * 78.233 + mapSeed * 0.5) * 43758.5453) % 1;
-        
-        const gemChance = 0.08 * activeGemModifier;
+        const gemChance = 0.04;
         
         if (noise < gemChance) {
-            realGems[key] = Math.floor((10 + Math.random() * 90) * activeGemModifier);
+            const maxGem = Math.floor(5 + (15 * activeGemModifier));
+            realGems[key] = Math.floor(1 + Math.random() * maxGem);
         } else {
             realGems[key] = 0;
         }
@@ -284,7 +303,14 @@ window.addEventListener('keydown', (e) => {
 
 async function triggerDeathSequence(targetX, targetY, pMine) {
     triggerBlockWarning(targetX, targetY);
-    
+
+    // Während des Tutorials: sofort soft-resetten, kein Game-Over-Screen, kein Highscore
+    if (tutorialActive) {
+        await new Promise(r => setTimeout(r, 500));
+        tutorialSoftReset();
+        return;
+    }
+
     await new Promise(r => setTimeout(r, 600));
     
     document.getElementById('mine-chance-val').innerText = (pMine * 100).toFixed(0);
@@ -418,6 +444,12 @@ window.addEventListener('keydown', (e) => {
         if (key === 'enter') {
             hideGameOver();
         }
+        return;
+    }
+
+    if (tutorialActive && key === 'enter') {
+        e.preventDefault();
+        advanceTutorial();
         return;
     }
 
@@ -631,22 +663,19 @@ function updateDynamicGraphs() {
     mineMinLabel.innerText = `${minMinePercent}%`;
     mineMaxLabel.innerText = `${maxMinePercent}%`;
 
-    // GEMS
     const gemRect = document.getElementById('gem-rect');
-    const gemMinLabel = document.getElementById('gem-min-label');
     const gemMaxLabel = document.getElementById('gem-max-label');
     
-    const minGem = Math.floor(10 * activeGemModifier);
-    const maxGem = Math.floor(99 * activeGemModifier); 
+    const currentMax = 10 + (upgradeCounts.luck * 18);
     
-    const baseWidth = 160;
-    const currentWidth = baseWidth * activeGemModifier;
-    gemRect.setAttribute('width', currentWidth);
+    const baseWidth = 200;
+    const scaleFactor = currentMax / 10;
+    const newWidth = Math.min(baseWidth * scaleFactor, 300); // Max-Begrenzung damit es nicht aus dem SVG fliegt
     
-    gemMaxLabel.setAttribute('x', 40 + currentWidth - 15);
+    gemRect.setAttribute('width', newWidth);
     
-    gemMinLabel.innerText = `${minGem}G`;
-    gemMaxLabel.innerText = `${maxGem}G`;
+    gemMaxLabel.setAttribute('x', 40 + newWidth - 25);
+    gemMaxLabel.innerText = `${currentMax}G`;
 }
 
 function triggerFloatingText(amount) {
@@ -664,3 +693,262 @@ function triggerFloatingText(amount) {
 function hideInfo() {
     document.getElementById('info-screen').classList.add('hidden');
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TUTORIAL SYSTEM
+// ════════════════════════════════════════════════════════════════════════════
+
+const TUTORIAL_STORAGE_KEY = 'biasBlindspot_tutorialDone';
+
+/**
+ * Jeder Schritt definiert:
+ *   targetId   – ID des UI-Elements, das beleuchtet wird (null = kein Spotlight)
+ *   title      – Überschrift im Tooltip
+ *   text       – Erklärungstext (HTML erlaubt)
+ *   position   – wo der Tooltip erscheint: 'top' | 'bottom' | 'center'
+ */
+const TUTORIAL_STEPS_ALL = [
+    {
+        flag: 'welcome',
+        targetId: null,
+        title: '🤖 Willkommen bei Bias Blindspot',
+        text: 'Du steuerst einen KI-Agenten durch eine prozedural generierte Welt voller Gefahren.<br><br>Jeder Schritt ist ein Risiko — aber auch eine Chance auf Edelsteine. Dieses Tutorial erklärt dir die Grundlagen.',
+        position: 'center',
+    },
+    {
+        flag: 'world',
+        targetId: 'grid-stage',
+        title: '🗺️ Die Welt',
+        text: 'Die Welt wird unendlich um dich herum generiert. <strong>Leuchtende Felder</strong> sind betretbar. <strong>Graue Blöcke</strong> sind Wände — die musst du umgehen.<br><br>💎-Felder enthalten Edelsteine, die du beim Betreten einsammelst.',
+        position: 'center',
+    },
+    {
+        flag: 'controls',
+        targetId: null,
+        title: '🎮 Steuerung',
+        text: '<strong>Maus / Touch:</strong> Klicke auf ein angrenzendes Feld um dorthin zu gehen.<br><br><strong>Tastatur:</strong> Pfeiltasten oder <kbd>W A S D</kbd> — auch Diagonalbewegung mit zwei Tasten gleichzeitig.<br><br>Im Tutorial kannst du auch <kbd>Enter</kbd> drücken, um weiterzugehen.',
+        position: 'center',
+    },
+    {
+        flag: 'gems',
+        targetId: 'ui-top-capsule',
+        title: '💎 Gems & Highscore',
+        text: '<strong>Gems</strong> ist dein aktuelles Guthaben — damit kaufst du Tools.<br><br><strong>Best</strong> ist dein Allzeit-Highscore, der im Browser gespeichert wird.',
+        position: 'bottom',
+    },
+    {
+        flag: 'scanner',
+        targetId: 'scan-btn',
+        title: '🔍 Scanner',
+        text: 'Startet eine <strong>Monte-Carlo-Simulation</strong>: 150 virtuelle Klone laufen je 10 Schritte durch die Welt. Felder mit vielen Toden werden rot markiert — so siehst du gefährliche Bereiche, <em>bevor</em> du sie betrittst.',
+        position: 'top',
+    },
+    {
+        flag: 'safeBooster',
+        targetId: 'safety-btn',
+        title: '🛡️ Safe-Booster',
+        text: 'Reduziert das Explosionsrisiko aller Minen um <strong>20 %</strong>. Bis zu 5-mal kaufbar — das Maximum schrumpft den Risiko-Erwartungswert auf etwa 33 % des Originalwerts.',
+        position: 'top',
+    },
+    {
+        flag: 'luckBooster',
+        targetId: 'luck-btn',
+        title: '🍀 Glücks-Booster',
+        text: 'Erhöht den maximalen Gem-Ertrag von Edelsteinfeldern um <strong>20 %</strong>. Bis zu 5-mal kaufbar. Auf Stufe 5 kannst du bis zu <strong>~100 Gems</strong> aus einem einzigen Feld holen.',
+        position: 'top',
+    },
+    {
+        flag: 'charts',
+        targetId: 'info-btn',
+        title: '📊 Wahrscheinlichkeits-Diagramme',
+        text: 'Hier siehst du die mathematischen Verteilungen hinter dem Spiel: die Dichtefunktion des Minen-Risikos (rechtsschief — die meisten Minen sind schwach) und die Gleichverteilung des Gem-Ertrags.<br><br>Die Graphen passen sich an deine Upgrades an.',
+        position: 'bottom',
+    },
+    {
+        flag: 'tip',
+        targetId: null,
+        title: '💡 Ein letzter Tipp',
+        text: 'Das Risiko steigt, je länger du überlebst — aber die Booster können das abfedern. Nutze den Scanner, wenn du unsicher bist, welche Richtung sicherer ist.<br><br><strong>Viel Erfolg — und vorsichtig sein! 💥</strong>',
+        position: 'center',
+    },
+];
+
+// Nur Schritte einschließen, deren Flag auf true gesetzt ist
+const TUTORIAL_STEPS = TUTORIAL_STEPS_ALL.filter(s => TUTORIAL_SHOW[s.flag] !== false);
+
+let tutorialStep = 0;
+let tutorialActive = false;
+let tutorialOverlay = null;
+
+function shouldShowTutorial() {
+    if (FORCE_TUTORIAL) return true;
+    return !localStorage.getItem(TUTORIAL_STORAGE_KEY);
+}
+
+function markTutorialDone() {
+    localStorage.setItem(TUTORIAL_STORAGE_KEY, '1');
+}
+
+function startTutorial() {
+    if (tutorialActive) return;
+    tutorialActive = true;
+    tutorialStep = 0;
+    buildTutorialOverlay();
+    showTutorialStep(0);
+}
+
+function buildTutorialOverlay() {
+    // Backdrop
+    tutorialOverlay = document.createElement('div');
+    tutorialOverlay.id = 'tutorial-overlay';
+    tutorialOverlay.innerHTML = `
+        <div id="tutorial-spotlight"></div>
+        <div id="tutorial-box">
+            <div id="tutorial-header">
+                <span id="tutorial-title"></span>
+                <span id="tutorial-counter"></span>
+            </div>
+            <div id="tutorial-text"></div>
+            <div id="tutorial-footer">
+                <button id="tutorial-skip-btn" onclick="endTutorial()">Überspringen</button>
+                <button id="tutorial-next-btn" onclick="advanceTutorial()">Weiter →</button>
+            </div>
+            <div id="tutorial-dots"></div>
+        </div>`;
+    document.body.appendChild(tutorialOverlay);
+}
+
+function showTutorialStep(index) {
+    const step = TUTORIAL_STEPS[index];
+    const isLast = index === TUTORIAL_STEPS.length - 1;
+
+    document.getElementById('tutorial-title').innerHTML   = step.title;
+    document.getElementById('tutorial-text').innerHTML    = step.text;
+    document.getElementById('tutorial-counter').innerText = `${index + 1} / ${TUTORIAL_STEPS.length}`;
+    document.getElementById('tutorial-next-btn').innerText = isLast ? 'Los geht\'s! 🚀' : 'Weiter →';
+
+    // Dot-Navigation
+    const dotsEl = document.getElementById('tutorial-dots');
+    dotsEl.innerHTML = '';
+    TUTORIAL_STEPS.forEach((_, i) => {
+        const dot = document.createElement('span');
+        dot.className = 'tutorial-dot' + (i === index ? ' active' : '');
+        dot.onclick = () => { tutorialStep = i; showTutorialStep(i); };
+        dotsEl.appendChild(dot);
+    });
+
+    // Spotlight
+    positionTutorialBox(step);
+}
+
+function positionTutorialBox(step) {
+    const spotlight = document.getElementById('tutorial-spotlight');
+    const box       = document.getElementById('tutorial-box');
+
+    box.style.top       = '';
+    box.style.bottom    = '';
+    box.style.left      = '';
+    box.style.right     = '';
+    box.style.transform = '';
+
+    box.style.animation = 'none';
+    void box.offsetWidth;
+    box.style.animation = '';
+
+    const el = step.targetId ? document.getElementById(step.targetId) : null;
+
+    if (el && step.targetId !== 'grid-stage') {
+        const r   = el.getBoundingClientRect();
+        const pad = 10;
+
+        // Spotlight-Ring um das Ziel-Element
+        spotlight.style.cssText = `
+            display: block;
+            position: fixed;
+            left:   ${r.left   - pad}px;
+            top:    ${r.top    - pad}px;
+            width:  ${r.width  + pad * 2}px;
+            height: ${r.height + pad * 2}px;
+            border-radius: 16px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.75);
+            border: 2px solid rgba(0,255,204,0.7);
+            pointer-events: none;
+            z-index: 10001;
+            transition: all 0.35s ease;
+        `;
+
+        box.style.left      = '50%';
+        box.style.transform = 'translateX(-50%)';
+
+        // Vertikal: Element in unterer Bildschirmhälfte → Box darüber, sonst darunter
+        if (r.top > window.innerHeight / 2) {
+            box.style.bottom = `${window.innerHeight - r.top + pad + 12}px`;
+        } else {
+            box.style.top = `${r.bottom + pad + 12}px`;
+        }
+
+    } else {
+        // Kein spezifisches Ziel → Box unterhalb des 3×3-Startfelds (Roboter bleibt sichtbar)
+        // Der Spieler steht immer in der Bildschirmmitte; das 3×3-Grid endet 1.5 Zellen darunter.
+        spotlight.style.display = 'none';
+        const belowGrid = window.innerHeight / 2 + CELL_SIZE * 2;
+        box.style.left      = '50%';
+        box.style.transform = 'translateX(-50%)';
+        box.style.top       = `${belowGrid}px`;
+    }
+}
+
+function advanceTutorial() {
+    tutorialStep++;
+    if (tutorialStep >= TUTORIAL_STEPS.length) {
+        endTutorial();
+    } else {
+        showTutorialStep(tutorialStep);
+    }
+}
+
+/**
+ * Setzt den Spieler zurück ohne neue Karte oder Highscore-Speicherung.
+ * Wird beim Tod während des Tutorials aufgerufen.
+ */
+function tutorialSoftReset() {
+    gemsCollected       = 0;
+    playerX             = 0;
+    playerY             = 0;
+    isGameOver          = false;
+    activeKeys.clear();
+    isControlLocked     = false;
+    queuedDx            = 0;
+    queuedDy            = 0;
+
+    visitedFields.clear();
+    visitedFields.add("0,0");
+    collectedGemsLocations.clear();
+    realMines  = {};   // Minen neu würfeln
+    scanDeaths = {};
+
+    updateScoreUI();
+    updateViewport();
+}
+
+function endTutorial() {
+    tutorialActive = false;
+    markTutorialDone();
+    if (tutorialOverlay) {
+        tutorialOverlay.style.opacity = '0';
+        setTimeout(() => {
+            if (tutorialOverlay && tutorialOverlay.parentNode) {
+                tutorialOverlay.parentNode.removeChild(tutorialOverlay);
+            }
+            tutorialOverlay = null;
+        }, 350);
+    }
+}
+
+// Tutorial nach dem Loader starten
+window.addEventListener('load', () => {
+    if (shouldShowTutorial()) {
+        // Warten bis der Loader weg ist
+        setTimeout(startTutorial, 1400);
+    }
+});
