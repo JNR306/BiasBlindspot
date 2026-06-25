@@ -177,6 +177,9 @@ function updateViewport() {
         debugElement.innerText = `Koord: (${playerX}, ${playerY})`;
     }
 
+    const viewWidth  = window.visualViewport ? window.visualViewport.width  : window.innerWidth;
+    const viewHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
     const viewCols = Math.ceil(window.innerWidth / CELL_SIZE) + 6;
     const viewRows = Math.ceil(window.innerHeight / CELL_SIZE) + 6;
 
@@ -248,14 +251,19 @@ function updateViewport() {
     const tutorialOverlay = document.getElementById('tutorial-overlay');
     const isTutorialVisible = tutorialOverlay && !tutorialOverlay.classList.contains('hidden');
     
-    const screenCenterX = window.innerWidth / 2 - (CELL_SIZE / 2);
+    const screenCenterX = viewWidth / 2 - (CELL_SIZE / 2);
     const screenCenterY = isTutorialVisible 
-        ? (window.innerHeight * 0.32) - (CELL_SIZE / 2)
-        : (window.innerHeight * 0.50) - (CELL_SIZE / 2);
+        ? (viewHeight * 0.32) - (CELL_SIZE / 2)
+        : (viewHeight * 0.50) - (CELL_SIZE / 2);
     
     const offsetX = -(playerX * CELL_SIZE) + screenCenterX;
     const offsetY = -(playerY * CELL_SIZE) + screenCenterY;
     stage.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+}
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateViewport);
+    window.visualViewport.addEventListener('scroll', updateViewport);
 }
 
 /**
