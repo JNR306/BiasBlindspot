@@ -808,3 +808,7 @@ body {
     margin-left: auto;
     margin-right: auto;
 }
+
+#tutorial-box {
+    touch-action: pan-y !important;
+}

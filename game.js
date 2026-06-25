@@ -581,6 +581,10 @@ window.addEventListener('resize', () => {
 updateViewport();
 
 document.addEventListener('touchmove', (e) => {
+    if (e.target.closest('#tutorial-box')) {
+        return; 
+    }
+
     if (e.touches.length === 1) {
         e.preventDefault();
     }
