@@ -816,3 +816,7 @@ body {
 #ui-bottom-bar {
     position: fixed !important;
 }
+
+#ui-top-capsule {
+    position: fixed !important;
+}
