@@ -812,3 +812,7 @@ body {
 #tutorial-box {
     touch-action: pan-y !important;
 }
+
+#ui-bottom-bar {
+    position: fixed !important;
+}
