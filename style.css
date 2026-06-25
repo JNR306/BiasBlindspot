@@ -774,3 +774,37 @@ body {
         overflow-y: auto;
     }
 }
+
+#game-over-screen .tool-btn {
+    flex: none;
+}
+
+#toast-message {
+    top: 80px !important;
+    bottom: auto !important;
+}
+
+@media (max-width: 600px) {
+    #toast-message {
+        top: auto !important;
+        bottom: calc(110px + env(safe-area-inset-bottom, 0px)) !important;
+        left: 12px !important;
+        right: 12px !important;
+    }
+}
+
+@media (max-height: 450px) and (orientation: landscape) {
+    #toast-message {
+        top: 8px !important;
+        bottom: auto !important;
+        right: 8px !important;
+        left: auto !important;
+    }
+}
+
+#game-over-screen p {
+    text-align: center;
+    max-width: 90vw;
+    margin-left: auto;
+    margin-right: auto;
+}
