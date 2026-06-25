@@ -4,7 +4,7 @@ const DEBUG_MODE = false;
 // ── Tutorial-Flags ───────────────────────────────────────────────────────────
 // FORCE_TUTORIAL: true = Tutorial immer zeigen (überschreibt localStorage).
 //                 false = nur beim ersten Besuch.
-const FORCE_TUTORIAL = true;
+const FORCE_TUTORIAL = false;
 
 // Einzelne Tutorial-Schritte ein-/ausblenden (true = sichtbar, false = überspringen):
 const TUTORIAL_SHOW = {
