@@ -244,8 +244,15 @@ function updateViewport() {
 
     playerElement.style.left = `${playerX * CELL_SIZE}px`;
     playerElement.style.top = `${playerY * CELL_SIZE}px`;
+    
+    const tutorialOverlay = document.getElementById('tutorial-overlay');
+    const isTutorialVisible = tutorialOverlay && !tutorialOverlay.classList.contains('hidden');
+    
     const screenCenterX = window.innerWidth / 2 - (CELL_SIZE / 2);
-    const screenCenterY = window.innerHeight / 2 - (CELL_SIZE / 2);
+    const screenCenterY = isTutorialVisible 
+        ? (window.innerHeight * 0.32) - (CELL_SIZE / 2)
+        : (window.innerHeight * 0.50) - (CELL_SIZE / 2);
+    
     const offsetX = -(playerX * CELL_SIZE) + screenCenterX;
     const offsetY = -(playerY * CELL_SIZE) + screenCenterY;
     stage.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
@@ -293,6 +300,8 @@ window.onload = () => {
     setTimeout(() => {
         document.getElementById('loader').classList.add('loader-hidden');
     }, 1200);
+
+    updateButtonPrices();
 };
 
 window.addEventListener('keydown', (e) => {
@@ -565,7 +574,10 @@ scanBtn.onclick = function triggerScan() {
     updateViewport();
 };
 
-window.addEventListener('resize', updateViewport);
+window.addEventListener('resize', () => {
+    updateViewport();
+    updateButtonPrices();
+});
 updateViewport();
 
 document.addEventListener('touchmove', (e) => {
@@ -620,25 +632,30 @@ function buyTool(type) {
     updateViewport();
 }
 
+function isMobileScreen() {
+    return window.innerWidth < 600 || (window.innerHeight < 450 && window.innerWidth < 900);
+}
+
 function updateButtonPrices() {
     const safetyBtn = document.getElementById('safety-btn');
-    const luckBtn = document.getElementById('luck-btn');
+    const luckBtn   = document.getElementById('luck-btn');
+    const mobile    = isMobileScreen();
 
     if (safetyBtn) {
         if (upgradeCounts['safety'] >= 5) {
-            safetyBtn.innerText = `🛡️ Safe-Booster (MAX)`;
+            safetyBtn.innerText = mobile ? `🛡️ Safe (MAX)` : `🛡️ Safe-Booster (MAX)`;
         } else {
             const nextSafety = Math.floor(50 * Math.pow(1.5, upgradeCounts['safety'] || 0));
-            safetyBtn.innerText = `🛡️ Safe-Booster (${nextSafety}G)`;
+            safetyBtn.innerText = mobile ? `🛡️ Safe (${nextSafety}G)` : `🛡️ Safe-Booster (${nextSafety}G)`;
         }
     }
 
     if (luckBtn) {
         if (upgradeCounts['luck'] >= 5) {
-            luckBtn.innerText = `🍀 Glücks-Booster (MAX)`;
+            luckBtn.innerText = mobile ? `🍀 Glück (MAX)` : `🍀 Glücks-Booster (MAX)`;
         } else {
             const nextLuck = Math.floor(60 * Math.pow(1.5, upgradeCounts['luck'] || 0));
-            luckBtn.innerText = `🍀 Glücks-Booster (${nextLuck}G)`;
+            luckBtn.innerText = mobile ? `🍀 Glück (${nextLuck}G)` : `🍀 Glücks-Booster (${nextLuck}G)`;
         }
     }
 }
@@ -739,21 +756,21 @@ const TUTORIAL_STEPS_ALL = [
     {
         flag: 'scanner',
         targetId: 'scan-btn',
-        title: '🔍 Scanner',
+        title: '🔍 Scanner (10 Gems)',
         text: 'Startet eine <strong>Monte-Carlo-Simulation</strong>: 150 virtuelle Klone laufen je 10 Schritte durch die Welt. Felder mit vielen Toden werden rot markiert — so siehst du gefährliche Bereiche, <em>bevor</em> du sie betrittst.',
         position: 'top',
     },
     {
         flag: 'safeBooster',
         targetId: 'safety-btn',
-        title: '🛡️ Safe-Booster',
+        title: '🛡️ Safe-Booster (50 Gems)',
         text: 'Reduziert das Explosionsrisiko aller Minen um <strong>20 %</strong>. Bis zu 5-mal kaufbar — das Maximum schrumpft den Risiko-Erwartungswert auf etwa 33 % des Originalwerts.',
         position: 'top',
     },
     {
         flag: 'luckBooster',
         targetId: 'luck-btn',
-        title: '🍀 Glücks-Booster',
+        title: '🍀 Glücks-Booster (60 Gems)',
         text: 'Erhöht den maximalen Gem-Ertrag von Edelsteinfeldern um <strong>20 %</strong>. Bis zu 5-mal kaufbar. Auf Stufe 5 kannst du bis zu <strong>~100 Gems</strong> aus einem einzigen Feld holen.',
         position: 'top',
     },
@@ -844,6 +861,20 @@ function showTutorialStep(index) {
 function positionTutorialBox(step) {
     const spotlight = document.getElementById('tutorial-spotlight');
     const box       = document.getElementById('tutorial-box');
+    const vw        = window.innerWidth;
+    const vh        = window.innerHeight;
+
+    const isPortraitMobile  = vw  < 768;
+    const isLandscapeMobile = vh  < 450 && vw < 900;
+    const mobile            = isPortraitMobile || isLandscapeMobile;
+
+    const safeMargin = mobile ? 14 : 20;
+
+    const bottomBarEl   = document.getElementById('ui-bottom-bar');
+    const bottomBarRect = bottomBarEl ? bottomBarEl.getBoundingClientRect() : null;
+    const aboveBar      = bottomBarRect
+        ? vh - bottomBarRect.top + 14
+        : (mobile ? 80 : 70);
 
     box.style.top       = '';
     box.style.bottom    = '';
@@ -855,47 +886,57 @@ function positionTutorialBox(step) {
     void box.offsetWidth;
     box.style.animation = '';
 
-    const el = step.targetId ? document.getElementById(step.targetId) : null;
+    box.style.left      = '50%';
+    box.style.transform = 'translateX(-50%)';
 
-    if (el && step.targetId !== 'grid-stage') {
+    const el = (step.targetId && step.targetId !== 'grid-stage')
+        ? document.getElementById(step.targetId)
+        : null;
+
+    if (el) {
         const r   = el.getBoundingClientRect();
-        const pad = 10;
+        const pad = mobile ? 6 : 10;
 
-        // Spotlight-Ring um das Ziel-Element
         spotlight.style.cssText = `
-            display: block;
-            position: fixed;
-            left:   ${r.left   - pad}px;
-            top:    ${r.top    - pad}px;
-            width:  ${r.width  + pad * 2}px;
-            height: ${r.height + pad * 2}px;
+            display: block; position: fixed;
+            left: ${r.left - pad}px; top: ${r.top - pad}px;
+            width: ${r.width + pad * 2}px; height: ${r.height + pad * 2}px;
             border-radius: 16px;
             box-shadow: 0 0 0 9999px rgba(0,0,0,0.75);
             border: 2px solid rgba(0,255,204,0.7);
-            pointer-events: none;
-            z-index: 10001;
-            transition: all 0.35s ease;
-        `;
+            pointer-events: none; z-index: 10001; transition: all 0.35s ease;`;
 
-        box.style.left      = '50%';
-        box.style.transform = 'translateX(-50%)';
-
-        // Vertikal: Element in unterer Bildschirmhälfte → Box darüber, sonst darunter
-        if (r.top > window.innerHeight / 2) {
-            box.style.bottom = `${window.innerHeight - r.top + pad + 12}px`;
+        if (mobile) {
+            box.style.bottom = `${aboveBar}px`;
         } else {
-            box.style.top = `${r.bottom + pad + 12}px`;
+            if (r.top > vh / 2) {
+                box.style.bottom = `${vh - r.top + pad + 12}px`;
+            } else {
+                box.style.top = `${r.bottom + pad + 12}px`;
+            }
         }
-
     } else {
-        // Kein spezifisches Ziel → Box unterhalb des 3×3-Startfelds (Roboter bleibt sichtbar)
-        // Der Spieler steht immer in der Bildschirmmitte; das 3×3-Grid endet 1.5 Zellen darunter.
         spotlight.style.display = 'none';
-        const belowGrid = window.innerHeight / 2 + CELL_SIZE * 2;
-        box.style.left      = '50%';
-        box.style.transform = 'translateX(-50%)';
-        box.style.top       = `${belowGrid}px`;
+
+        if (mobile) {
+            box.style.bottom = `${aboveBar}px`;
+        } else {
+            box.style.top = `${vh / 2 + CELL_SIZE * 2}px`;
+        }
     }
+
+    requestAnimationFrame(() => {
+        const r = box.getBoundingClientRect();
+        if (!r.width) return;
+
+        if (r.top < safeMargin) {
+            box.style.bottom = '';
+            box.style.top    = `${safeMargin}px`;
+        } else if (r.bottom > vh - safeMargin) {
+            box.style.top    = '';
+            box.style.bottom = `${safeMargin}px`;
+        }
+    });
 }
 
 function advanceTutorial() {
